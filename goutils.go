@@ -104,3 +104,15 @@ func GetUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
+
+//  loops over a slice, and selects and returns only the elements
+//  that meet a criteria captured by a function value
+//  https://stackoverflow.com/questions/37562873/most-idiomatic-way-to-select-elements-from-an-array-in-golang
+func filter(ss []string, test func(string) bool) (ret []string) {
+	for _, s := range ss {
+		if test(s) {
+			ret = append(ret, s)
+		}
+	}
+	return
+}
