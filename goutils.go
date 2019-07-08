@@ -4,34 +4,15 @@ package goutils
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/mgutz/ansi"
+	"github.com/lao-tseu-is-alive/golog"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
 	"strings"
-	"time"
 )
-
-func GetTimeStamp() string {
-	t := time.Now()
-	timeString := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d.%03d",
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		t.Hour(),
-		t.Minute(),
-		t.Second(),
-		t.Nanosecond()/100000)
-	return fmt.Sprintf("%s", timeString)
-}
-
-func GetCaller(skip int) (file string, line int, function string) {
-	pc := make([]uintptr, 15)
-	n := runtime.Callers(skip, pc)
-	frames := runtime.CallersFrames(pc[:n])
-	frame, _ := frames.Next()
-	return frame.File, frame.Line, frame.Function
-}
 
 func PrintCallStack() {
 	// Ask runtime.Callers for up to 10 pcs, including runtime.Callers itself.
@@ -57,22 +38,6 @@ func PrintCallStack() {
 		if !more {
 			break
 		}
-	}
-}
-
-func DoItOrDie(err error, message string, v ...interface{}) {
-	if err != nil {
-		var loggerError = log.New(os.Stderr, "FATAL_ERROR: ", log.Lshortfile)
-		filename, line, funcname := GetCaller(3)
-		red := ansi.ColorFunc("red+b:yellow+h")
-		logErr := loggerError.Output(2,
-			red(fmt.Sprintf(
-				"[%s], Function: %s, File: %s:%d, Error: [%v], Message: %s",
-				GetTimeStamp(), funcname, filename, line, err, fmt.Sprintf(message, v...))))
-		if logErr != nil {
-			log.Fatalln("ERROR in DoItOrDie trying to output Err(message) to stderr console !")
-		}
-		log.Fatalf("# FATAL ERROR %s in function %s, [%v]", fmt.Sprintf(message, v...), funcname, err)
 	}
 }
 
@@ -115,4 +80,40 @@ func filter(ss []string, test func(string) bool) (ret []string) {
 		}
 	}
 	return
+}
+
+// get back the text content of a filename if FileEncoding is used decode the content with this encodeing (default is
+func GetFileTextContent(filename string, FileEncoding string) string {
+	golog.Un(golog.Trace("getFileTextContent(%s, %s)", filename, FileEncoding))
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	// Read all in raw form.
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		panic(err)
+	}
+	content := string(b)
+
+	if FileEncoding == "" {
+		//no special encoding asked so send content as is
+		return content
+	} else {
+		var decoder *encoding.Decoder
+		switch strings.ToLower(FileEncoding) {
+		case "win1252", "cp1252", "windows-1252", "windows1252":
+			// Decode CP1252 to unicode https://en.wikipedia.org/wiki/Windows-1252
+			decoder = charmap.Windows1252.NewDecoder()
+		default:
+			decoder = charmap.ISO8859_1.NewDecoder()
+		}
+		reader := decoder.Reader(strings.NewReader(content))
+		b, err = ioutil.ReadAll(reader)
+		if err != nil {
+			panic(err)
+		}
+		return string(b)
+	}
 }
