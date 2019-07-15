@@ -82,7 +82,7 @@ func filter(ss []string, test func(string) bool) (ret []string) {
 	return
 }
 
-// get back the text content of a filename if FileEncoding is used decode the content with this encodeing (default is
+// get back the text content of a filename if FileEncoding is used decode the content with this encoding (default is
 func GetFileTextContent(filename string, FileEncoding string) string {
 	golog.Un(golog.Trace("getFileTextContent(%s, %s)", filename, FileEncoding))
 	f, err := os.Open(filename)
