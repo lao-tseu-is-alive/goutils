@@ -7,6 +7,7 @@ import (
 	"github.com/lao-tseu-is-alive/golog"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
+	"gopkg.in/ini.v1"
 	"io/ioutil"
 	"log"
 	"os"
@@ -116,4 +117,68 @@ func GetFileTextContent(filename string, FileEncoding string) string {
 		}
 		return string(b)
 	}
+}
+
+type dbErrorString struct {
+	s string
+}
+
+func (e *dbErrorString) Error() string {
+	return e.s
+}
+
+// New returns an error that formats as the given text.
+func NewDBError(text string) error {
+	return &dbErrorString{text}
+}
+
+func GetDbConnectionString(db string) (string, error) {
+	cfg, err := ini.Load(fmt.Sprintf("/data/config/%s.ini", db))
+	if err != nil {
+		msg := fmt.Sprintf("Failed to read DB configuration file: %v", err)
+		golog.Err(msg)
+		return "", NewDBError(msg)
+	}
+
+	host := cfg.Section("production").Key("pgdatabase.params.host").Validate(func(in string) string {
+		if len(in) == 0 {
+			msg := "ERROR : No valid DB Hostname found in configuration"
+			golog.Err(msg)
+			return msg
+		}
+		return in
+	})
+	if strings.HasPrefix(host, "ERROR") {
+		return "", NewDBError(host)
+	} else {
+		golog.Info("DB  hostname is : %s [%T]", host, host)
+	}
+
+	username := cfg.Section("production").Key("pgdatabase.params.username").Validate(func(in string) string {
+		if len(in) == 0 {
+			msg := "ERROR : No valid DB user found in configuration"
+			golog.Err(msg)
+			return msg
+		}
+		return in
+	})
+	if strings.HasPrefix(username, "ERROR") {
+		return "", NewDBError(username)
+	} else {
+		golog.Info("User for DB  authentification is : %s", username)
+	}
+	pass := cfg.Section("production").Key("pgdatabase.params.password").Validate(func(in string) string {
+		if len(in) == 0 {
+			msg := "ERROR : No valid DB user password found in configuration"
+			golog.Err(msg)
+			return msg
+		}
+		return in
+	})
+	if strings.HasPrefix(host, "ERROR") {
+		return "", NewDBError(pass)
+	} else {
+		golog.Info("User password for DB authentification is : %s", pass)
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable", username, pass, host, db), nil
 }
