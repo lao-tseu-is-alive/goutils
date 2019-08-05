@@ -178,7 +178,7 @@ func GetDbConnectionString(db string) (string, error) {
 	if strings.HasPrefix(host, "ERROR") {
 		return "", NewDBError(pass)
 	} else {
-		golog.Info("User password for DB authentification is : %s", pass)
+		golog.Info("User password for DB authentification was found ")
 	}
 	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable", username, pass, host, db), nil
 }
